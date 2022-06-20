@@ -21,14 +21,14 @@ splitOnElem e s   =  cons (
 
 
 
-cmp2 :: (a -> b -> c) -> (x -> a) -> (x -> b) -> x -> c
-cmp2 f g h x = f (g x) (h x)
+comp2 :: (a -> b -> c) -> (x -> a) -> (x -> b) -> x -> c
+comp2 f g h x = f (g x) (h x)
 
-cmp3 :: (a -> b -> c -> d) -> (x -> a) -> (x -> b) -> (x -> c) -> x -> d
-cmp3 f g h i x = cmp2 f g h x (i x)
+comp3 :: (a -> b -> c -> d) -> (x -> a) -> (x -> b) -> (x -> c) -> x -> d
+comp3 f g h i x = comp2 f g h x (i x)
 
-cmp4 :: (a -> b -> c -> d -> e) -> (x -> a) -> (x -> b) -> (x -> c) -> (x -> d) -> x -> e
-cmp4 f g h i j x = cmp3 f g h i x (j x)
+comp4 :: (a -> b -> c -> d -> e) -> (x -> a) -> (x -> b) -> (x -> c) -> (x -> d) -> x -> e
+comp4 f g h i j x = comp3 f g h i x (j x)
 
-cmp5 :: (a -> b -> c -> d -> e -> f) -> (x -> a) -> (x -> b) -> (x -> c) -> (x -> d) -> (x -> e) -> x -> f
-cmp5 f g h i j k x = cmp4 f g h i j x (k x)
+comp5 :: (a -> b -> c -> d -> e -> f) -> (x -> a) -> (x -> b) -> (x -> c) -> (x -> d) -> (x -> e) -> x -> f
+comp5 f g h i j k x = comp4 f g h i j x (k x)

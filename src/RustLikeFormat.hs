@@ -1,6 +1,10 @@
 module RustLikeFormat
-  ( formatSpec
+  ( formatString
+  , formatSpec
+  , FormatString(..)
+  , Format(..)
   , Ident
+  , Arg(..)
   , Argument
   , Padding(..)
   , FormatSpec(..)
@@ -16,7 +20,7 @@ module RustLikeFormat
   ) where
 
 
-import Data.Char
+import Data.Char ( isAlpha, isDigit )
 
 import Text.Regex.Applicative
 import Text.Regex.Applicative.Common
@@ -28,15 +32,53 @@ eps = mempty
 
 option :: RE s a -> a -> RE s a
 option try except = try <|> (except <$ eps)
-option' :: RE s a -> a -> RE s a
-option' try except = (except <$ eps) <|> try
 
+optionDflt :: Default a => RE s a -> RE s a
+optionDflt try = option try dflt
+
+
+class Default a where
+  dflt :: a
+
+newtype FormatString = FormatString [Either String Format] deriving Show
+formatString :: RE Char FormatString
+formatString = FormatString <$> ((:) <$> text <*> items) where
+  
+  items :: RE Char [Either String Format]
+  items = concat <$> many item
+
+  item :: RE Char [Either String Format]
+  item = l2 <$> maybeFormat <*> text
+
+  l2 :: a -> a -> [a]
+  l2 x y = [x, y]
+  
+  text :: RE Char (Either String Format)
+  text = Left <$> noBrackets
+
+  maybeFormat :: RE Char (Either String Format)
+  maybeFormat = Left "{" <$ string "\\{" <|> Left "}" <$ string "\\}" <|> Right <$> format
+
+noBrackets :: RE Char String
+noBrackets = many $ psym (`notElem` ['{', '}'])
+
+data Format = Format Arg FormatSpec deriving Show
+format :: RE Char Format
+format = Format <$> (sym '{' *> arg) <*> optionDflt (sym ':' *> formatSpec) <* sym '}'
 
 type Ident = String
 ident :: RE Char Ident
 ident = (:) <$> psym isAlpha <*> many isOk where
   isOk :: RE Char Char
   isOk = psym isAlpha <|> psym isDigit <|> sym '_'
+
+data Arg = Specified Argument | ArgFromIntput deriving Show
+instance Default Arg where
+  dflt = ArgFromIntput
+
+arg :: RE Char Arg
+arg = optionDflt (Specified <$> argument)
+
 
 data Argument = Numbered Int | Named Ident deriving Show
 argument :: RE Char Argument
@@ -45,6 +87,9 @@ argument = Named <$> ident <|> Numbered <$> decimal
 
 
 data Padding = Padding Fill Width Align deriving Show
+instance Default Padding where
+  dflt = Padding dflt dflt dflt
+
 data FormatSpec
   = FormatSpec
   { _padding      :: Padding
@@ -55,12 +100,14 @@ data FormatSpec
   , _displayType  :: DisplayType
   }
   deriving Show
+instance Default FormatSpec where
+  dflt = FormatSpec dflt Nothing False False Nothing dflt
 
 fromFormatSpec' :: FormatSpec' -> FormatSpec
 fromFormatSpec' spec' = let
-  padding = cmp3 Padding _fill' _width' _align' spec'
+  padding = comp3 Padding _fill' _width' _align' spec'
 
-  in cmp5 (FormatSpec padding) _sign' _hash' _zero' _precision' _displayType' spec'
+  in comp5 (FormatSpec padding) _sign' _hash' _zero' _precision' _displayType' spec'
 
 formatSpec :: RE Char FormatSpec
 formatSpec = fromFormatSpec' <$> formatSpec'
@@ -79,7 +126,7 @@ data FormatSpec'
   deriving Show
 
 formatSpec' :: RE Char FormatSpec'
-formatSpec' = cmp2 FormatSpec' fst snd  <$> fillAndAlign
+formatSpec' = comp2 FormatSpec' fst snd <$> fillAndAlign
                                         <*> sign'
                                         <*> hash
                                         <*> zero
@@ -90,29 +137,41 @@ formatSpec' = cmp2 FormatSpec' fst snd  <$> fillAndAlign
   where
 
     fillAndAlign :: RE Char (Fill, Align)
-    fillAndAlign = option ((,) <$> option fill (Fill ' ') <*> align) (Fill ' ', R)
+    fillAndAlign = option ((,) <$> optionDflt fill <*> align) (dflt, dflt)
 
     sign' = option (Just <$> sign) Nothing
     hash = option (True <$ sym '#') False
     zero = option (True <$ sym '0') False
-    width' = option width (Width $ Fixed 0)
+    width' = optionDflt width
     precision' = option (sym '.' *> (Just <$> precision)) Nothing
 
 
 
 newtype Fill = Fill Char deriving Show
+instance Default Fill where
+  dflt = Fill ' '
+
 fill :: RE Char Fill
 fill = Fill <$> anySym
 
+
 data Align = L | M | R deriving Show
+instance Default Align where
+  dflt = R
+
 align :: RE Char Align
 align = L <$ sym '<' <|> M <$ sym '^' <|> R <$ sym '>'
+
 
 data Sign = Plus | Minus deriving Show
 sign :: RE Char Sign
 sign = Plus <$ sym '+' <|> Minus <$ sym '-'
 
+
 newtype Width = Width Count deriving Show
+instance Default Width where
+  dflt = Width (Fixed 0)
+
 width :: RE Char Width
 width = Width <$> count
 
@@ -122,6 +181,9 @@ precision = Prec <$> count <|> PrecFromInput <$ sym '*'
 
 data UL = Lower | Upper deriving Show
 data DisplayType = UseDisplay | UseShow | UseOctal | UseHex UL | UseBinary | UseExp UL deriving Show
+instance Default DisplayType where
+  dflt = UseDisplay
+
 displayType :: RE Char DisplayType
 displayType = UseDisplay    <$ eps
           <|> UseShow       <$ sym '?'
