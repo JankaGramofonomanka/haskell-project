@@ -26,9 +26,9 @@ testCases
     , ( [rustFMT|{:x}|] (16 :: Int), "10",     "[rustFMT|{:x}|] 16" )
     , ( [rustFMT|{:X}|] (16 :: Int), "10",     "[rustFMT|{:X}|] 16" )
     , ( [rustFMT|{:x}|] (15 :: Int), "f",      "[rustFMT|{:x}|] 15" )
-    --, ( [rustFMT|{:X}|] (15 :: Int), "F",      "[rustFMT|{:X}|] 15" )
+    , ( [rustFMT|{:X}|] (15 :: Int), "F",      "[rustFMT|{:X}|] 15" )
     , ( [rustFMT|{:e}|] (10 :: Int), "1.0e1",  "[rustFMT|{:e}|] 10" )
-    --, ( [rustFMT|{:E}|] (10 :: Int), "1.0E1",  "[rustFMT|{:E}|] 10" )
+    , ( [rustFMT|{:E}|] (10 :: Int), "1.0E1",  "[rustFMT|{:E}|] 10" )
     
     , ( [rustFMT|{:<3}|]  (1 :: Int),   "  1", "[rustFMT|{:<3}|]  1   " )
     , ( [rustFMT|{:^3}|]  (1 :: Int),   " 1 ", "[rustFMT|{:^3}|]  1   " )

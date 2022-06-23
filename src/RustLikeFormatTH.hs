@@ -8,8 +8,10 @@ module RustLikeFormatTH
   , displayBin
   , displayOct
   , displayHex
+  , displayHexU
   , DisplayPrecision(..)
   , DisplayExp(..)
+  , displayExpU
   , Align(..)
   )
   where
@@ -50,6 +52,9 @@ displayPrecE = mkDisplayExpr "Prec"
 displayExpE :: Exp
 displayExpE = mkDisplayExpr "Exp"
 
+displayExpUE :: Exp
+displayExpUE = mkDisplayExpr "ExpU"
+
 displayBinE :: Exp
 displayBinE = mkDisplayExpr "Bin"
 
@@ -58,6 +63,9 @@ displayOctE = mkDisplayExpr "Oct"
 
 displayHexE :: Exp
 displayHexE = mkDisplayExpr "Hex"
+
+displayHexUE :: Exp
+displayHexUE = mkDisplayExpr "HexU"
 
 showE :: Exp
 showE = mkVarE "show"
@@ -131,11 +139,13 @@ processDispl displType prec toFormat = do
       Nothing -> AppE displayE toFormat
       Just precE -> mkApp displayPrecE [precE, toFormat]
 
-    UseShow   -> AppE showE       toFormat
-    UseOctal  -> AppE displayOctE toFormat
-    UseHex _  -> AppE displayHexE toFormat
-    UseBinary -> AppE displayBinE toFormat
-    UseExp _  -> AppE displayExpE toFormat
+    UseShow       -> AppE showE         toFormat
+    UseOctal      -> AppE displayOctE   toFormat
+    UseHex Lower  -> AppE displayHexE   toFormat
+    UseHex Upper  -> AppE displayHexUE  toFormat
+    UseBinary     -> AppE displayBinE   toFormat
+    UseExp Lower  -> AppE displayExpE   toFormat
+    UseExp Upper  -> AppE displayExpUE  toFormat
 
 processPrec :: Maybe Precision -> State FunState (Maybe Exp)
 processPrec Nothing = return Nothing

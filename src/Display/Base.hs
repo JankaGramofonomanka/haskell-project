@@ -30,7 +30,8 @@ instance DisplayBase Double where
 
 
 
-displayBin, displayOct, displayHex :: DisplayBase a => a -> String
+displayBin, displayOct, displayHex, displayHexU :: DisplayBase a => a -> String
 displayBin = displayBase 2
 displayOct = displayBase 8
 displayHex = displayBase 16
+displayHexU = map toUpper . displayHex
