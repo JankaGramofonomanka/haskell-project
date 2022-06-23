@@ -1,2 +1,9 @@
+import Test
+
+import Control.Monad
+
+test :: TestCase -> IO ()
+test (actual, expected, toPrint) = when (actual /= expected) $ print toPrint
+
 main :: IO ()
-main = putStrLn "Test suite not yet implemented"
+main = mapM_ test testCases >> print "Finished."

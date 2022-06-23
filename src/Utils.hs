@@ -20,9 +20,11 @@ splitOnElem e s   =  cons (
     cons ~(h, t)        =  h : t
 
 
+comp1 :: (a -> b) -> (x -> a) -> x -> b
+comp1 = (.)
 
 comp2 :: (a -> b -> c) -> (x -> a) -> (x -> b) -> x -> c
-comp2 f g h x = f (g x) (h x)
+comp2 f g h x = comp1 f g x (h x)
 
 comp3 :: (a -> b -> c -> d) -> (x -> a) -> (x -> b) -> (x -> c) -> x -> d
 comp3 f g h i x = comp2 f g h x (i x)

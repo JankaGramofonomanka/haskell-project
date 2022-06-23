@@ -5,7 +5,7 @@ module RustLikeFormat
   , Format(..)
   , Ident
   , Arg(..)
-  , Argument
+  , Argument(..)
   , Padding(..)
   , FormatSpec(..)
   , Fill(..)
@@ -40,7 +40,7 @@ optionDflt try = option try dflt
 class Default a where
   dflt :: a
 
-newtype FormatString = FormatString [Either String Format] deriving Show
+newtype FormatString = FormatString [Either String Format] deriving (Show, Eq, Ord)
 formatString :: RE Char FormatString
 formatString = FormatString <$> ((:) <$> text <*> items) where
   
@@ -62,7 +62,7 @@ formatString = FormatString <$> ((:) <$> text <*> items) where
 noBrackets :: RE Char String
 noBrackets = many $ psym (`notElem` ['{', '}'])
 
-data Format = Format Arg FormatSpec deriving Show
+data Format = Format Arg FormatSpec deriving (Show, Eq, Ord)
 format :: RE Char Format
 format = Format <$> (sym '{' *> arg) <*> optionDflt (sym ':' *> formatSpec) <* sym '}'
 
@@ -72,21 +72,24 @@ ident = (:) <$> psym isAlpha <*> many isOk where
   isOk :: RE Char Char
   isOk = psym isAlpha <|> psym isDigit <|> sym '_'
 
-data Arg = Specified Argument | ArgFromIntput deriving Show
+data Arg = Specified Argument | ArgFromInput deriving (Show, Eq, Ord)
 instance Default Arg where
-  dflt = ArgFromIntput
+  dflt = ArgFromInput
 
 arg :: RE Char Arg
 arg = optionDflt (Specified <$> argument)
 
 
-data Argument = Numbered Int | Named Ident deriving Show
+--data Argument = Numbered Int | Named Ident deriving (Show, Eq, Ord)
+--argument :: RE Char Argument
+--argument = Named <$> ident <|> Numbered <$> decimal
+newtype Argument = Numbered Int deriving (Show, Eq, Ord)
 argument :: RE Char Argument
-argument = Named <$> ident <|> Numbered <$> decimal
+argument = Numbered <$> decimal
 
 
 
-data Padding = Padding Fill Width Align deriving Show
+data Padding = Padding Fill Width Align deriving (Show, Eq, Ord)
 instance Default Padding where
   dflt = Padding dflt dflt dflt
 
@@ -99,7 +102,7 @@ data FormatSpec
   , _precision    :: Maybe Precision
   , _displayType  :: DisplayType
   }
-  deriving Show
+  deriving (Show, Eq, Ord)
 instance Default FormatSpec where
   dflt = FormatSpec dflt Nothing False False Nothing dflt
 
@@ -123,7 +126,7 @@ data FormatSpec'
   , _precision'   :: Maybe Precision
   , _displayType' :: DisplayType
   }
-  deriving Show
+  deriving (Show, Eq, Ord)
 
 formatSpec' :: RE Char FormatSpec'
 formatSpec' = comp2 FormatSpec' fst snd <$> fillAndAlign
@@ -147,7 +150,7 @@ formatSpec' = comp2 FormatSpec' fst snd <$> fillAndAlign
 
 
 
-newtype Fill = Fill Char deriving Show
+newtype Fill = Fill Char deriving (Show, Eq, Ord)
 instance Default Fill where
   dflt = Fill ' '
 
@@ -155,7 +158,7 @@ fill :: RE Char Fill
 fill = Fill <$> anySym
 
 
-data Align = L | M | R deriving Show
+data Align = L | M | R deriving (Show, Eq, Ord)
 instance Default Align where
   dflt = R
 
@@ -163,24 +166,32 @@ align :: RE Char Align
 align = L <$ sym '<' <|> M <$ sym '^' <|> R <$ sym '>'
 
 
-data Sign = Plus | Minus deriving Show
+data Sign = Plus | Minus deriving (Show, Eq, Ord)
 sign :: RE Char Sign
 sign = Plus <$ sym '+' <|> Minus <$ sym '-'
 
 
-newtype Width = Width Count deriving Show
+newtype Width = Width Count deriving (Show, Eq, Ord)
 instance Default Width where
   dflt = Width (Fixed 0)
 
 width :: RE Char Width
 width = Width <$> count
 
-data Precision = Prec Count | PrecFromInput deriving Show
+data Precision = Prec Count | PrecFromInput deriving (Show, Eq, Ord)
 precision :: RE Char Precision
 precision = Prec <$> count <|> PrecFromInput <$ sym '*'
 
-data UL = Lower | Upper deriving Show
-data DisplayType = UseDisplay | UseShow | UseOctal | UseHex UL | UseBinary | UseExp UL deriving Show
+data UL = Lower | Upper deriving (Show, Eq, Ord)
+data DisplayType
+  = UseDisplay
+  | UseShow
+  | UseOctal
+  | UseHex UL
+  | UseBinary
+  | UseExp UL
+  deriving (Show, Eq, Ord)
+
 instance Default DisplayType where
   dflt = UseDisplay
 
@@ -197,11 +208,11 @@ displayType = UseDisplay    <$ eps
           <|> UseExp Upper  <$ sym 'E'
 
 
-data Count = Fixed Int | Variable Parameter deriving Show
+data Count = Fixed Integer | Variable Parameter deriving (Show, Eq, Ord)
 count :: RE Char Count
 count = Fixed <$> decimal <|> Variable <$> parameter
 
-newtype Parameter = Parameter Argument deriving Show
+newtype Parameter = Parameter Argument deriving (Show, Eq, Ord)
 parameter :: RE Char Parameter
 parameter = Parameter <$> argument  <* sym '$'
 
