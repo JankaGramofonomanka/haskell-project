@@ -1,6 +1,8 @@
-module RustLikeFormat
-  ( formatString
+module Format.Parse
+  ( stringWithBrackets
+  , formatString
   , formatSpec
+  , InsideBrackets(..)
   , FormatString(..)
   , Format(..)
   , Ident
@@ -10,7 +12,7 @@ module RustLikeFormat
   , FormatSpec(..)
   , Fill(..)
   , Align(..)
-  , Sign(..)
+  --, Sign(..)
   , Width(..)
   , Precision(..)
   , UL(..)
@@ -26,6 +28,7 @@ import Text.Regex.Applicative
 import Text.Regex.Applicative.Common
 
 import Utils
+import Text.Read (Lexeme(String))
 
 eps :: RE s ()
 eps = mempty
@@ -40,24 +43,40 @@ optionDflt try = option try dflt
 class Default a where
   dflt :: a
 
-newtype FormatString = FormatString [Either String Format] deriving (Show, Eq, Ord)
-formatString :: RE Char FormatString
-formatString = FormatString <$> ((:) <$> text <*> items) where
+
+absFormatString :: RE Char format -> RE Char [Either String format]
+absFormatString format =  (:) <$> text <*> items where
   
-  items :: RE Char [Either String Format]
   items = concat <$> many item
 
-  item :: RE Char [Either String Format]
   item = l2 <$> maybeFormat <*> text
 
   l2 :: a -> a -> [a]
   l2 x y = [x, y]
   
-  text :: RE Char (Either String Format)
   text = Left <$> noBrackets
 
-  maybeFormat :: RE Char (Either String Format)
   maybeFormat = Left "{" <$ string "\\{" <|> Left "}" <$ string "\\}" <|> Right <$> format
+
+  
+
+newtype InsideBrackets = InsideBrackets String deriving (Show, Eq, Ord)
+stringWithBrackets :: RE Char [Either String InsideBrackets]
+stringWithBrackets = absFormatString fmt where
+
+  fmt = sym '{' *> (InsideBrackets <$> insideBrackets) <* sym '}'
+  insideBrackets = mempty <|> noBrackets
+  
+infixr 5 <++>
+(<++>) :: RE Char String -> RE Char String -> RE Char String
+left <++> right = (++) <$> left <*> right
+
+
+
+
+newtype FormatString = FormatString [Either String Format] deriving (Show, Eq, Ord)
+formatString :: RE Char FormatString
+formatString = FormatString <$> absFormatString format
 
 noBrackets :: RE Char String
 noBrackets = many $ psym (`notElem` ['{', '}'])
@@ -96,7 +115,7 @@ instance Default Padding where
 data FormatSpec
   = FormatSpec
   { _padding      :: Padding
-  , _sign         :: Maybe Sign
+  , _plus         :: Bool
   , _hash         :: Bool
   , _zero         :: Bool
   , _precision    :: Maybe Precision
@@ -104,13 +123,13 @@ data FormatSpec
   }
   deriving (Show, Eq, Ord)
 instance Default FormatSpec where
-  dflt = FormatSpec dflt Nothing False False Nothing dflt
+  dflt = FormatSpec dflt False False False Nothing dflt
 
 fromFormatSpec' :: FormatSpec' -> FormatSpec
 fromFormatSpec' spec' = let
   padding = comp3 Padding _fill' _width' _align' spec'
 
-  in comp5 (FormatSpec padding) _sign' _hash' _zero' _precision' _displayType' spec'
+  in comp5 (FormatSpec padding) _plus' _hash' _zero' _precision' _displayType' spec'
 
 formatSpec :: RE Char FormatSpec
 formatSpec = fromFormatSpec' <$> formatSpec'
@@ -119,7 +138,7 @@ data FormatSpec'
   = FormatSpec'
   { _fill'        :: Fill
   , _align'       :: Align
-  , _sign'        :: Maybe Sign
+  , _plus'        :: Bool
   , _hash'        :: Bool
   , _zero'        :: Bool
   , _width'       :: Width
@@ -130,7 +149,7 @@ data FormatSpec'
 
 formatSpec' :: RE Char FormatSpec'
 formatSpec' = comp2 FormatSpec' fst snd <$> fillAndAlign
-                                        <*> sign'
+                                        <*> plus'
                                         <*> hash
                                         <*> zero
                                         <*> width'
@@ -142,7 +161,7 @@ formatSpec' = comp2 FormatSpec' fst snd <$> fillAndAlign
     fillAndAlign :: RE Char (Fill, Align)
     fillAndAlign = option ((,) <$> optionDflt fill <*> align) (dflt, dflt)
 
-    sign' = option (Just <$> sign) Nothing
+    plus' = option sign False
     hash = option (True <$ sym '#') False
     zero = option (True <$ sym '0') False
     width' = optionDflt width
@@ -166,9 +185,8 @@ align :: RE Char Align
 align = L <$ sym '<' <|> M <$ sym '^' <|> R <$ sym '>'
 
 
-data Sign = Plus | Minus deriving (Show, Eq, Ord)
-sign :: RE Char Sign
-sign = Plus <$ sym '+' <|> Minus <$ sym '-'
+sign :: RE Char Bool
+sign = True <$ sym '+' <|> False <$ sym '-'
 
 
 newtype Width = Width Count deriving (Show, Eq, Ord)

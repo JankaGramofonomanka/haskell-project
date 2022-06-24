@@ -1,34 +1,16 @@
-{-# LANGUAGE RecordWildCards #-}
-
-module RustLikeFormatTH
-  ( rustFMT
-  , addPadding
-  , Display(..)
-  , DisplayBase(..)
-  , displayBin
-  , displayOct
-  , displayHex
-  , displayHexU
-  , displayBinP
-  , displayOctP
-  , displayHexP
-  , displayHexUP
-  , DisplayPrecision(..)
-  , DisplayExp(..)
-  , displayExpU
-  , Align(..)
-  )
-  where
+module Format.Common where
 
 import qualified Data.Map as M
 import Data.Maybe
 import Data.Either
+
 
 import Control.Monad.State.Strict
 
 import Language.Haskell.TH
 import Language.Haskell.TH.Quote
 import Text.Regex.Applicative
+import Language.Haskell.Meta.Parse
 
 
 import Display.Display
@@ -38,12 +20,10 @@ import Display.Precision
 import Display.Exponential
 
 
-import RustLikeFormat
+import Format.Parse
 import Utils
 
 
-namedArgError :: a
-namedArgError = error "named argument doesn't make sense here"
 
 addPaddingE :: Exp
 addPaddingE = mkVarE "addPadding"
@@ -105,52 +85,23 @@ mkAlignE L = ConE $ mkName "L"
 mkAlignE M = ConE $ mkName "M"
 mkAlignE R = ConE $ mkName "R"
 
-mkParamName :: Int -> String
-mkParamName n = "x" ++ show n
-
 mkApp :: Exp -> [Exp] -> Exp
 mkApp = foldl AppE
 
 
 
-type ArgNum = Int
-data FunState = FunState { implicitArgNum :: ArgNum, numParams :: Int } deriving Show
-initFunState :: FunState
-initFunState = FunState 0 0
+class Monad m => FormatBuilder m where
 
-addParam :: ArgNum -> State FunState ()
-addParam n = do
-  FunState { numParams = k, .. } <- get
-  put $ FunState { numParams = max k (n + 1), .. }
+  processArgument :: Argument -> m Exp
 
-incrImplicitArgNum :: State FunState ()
-incrImplicitArgNum = do
-  FunState { implicitArgNum = n, .. } <- get
-  put $ FunState { implicitArgNum = n + 1, .. }
-  addParam n
-  
-  
 
-processFormat :: Format -> State FunState Exp
-processFormat (Format arg spec) = do
-  toFormat <- mkName . mkParamName <$> getArgNum arg
-  processFormatSpec toFormat spec
-
-getArgNum :: Arg -> State FunState ArgNum
-getArgNum (Specified (Numbered n)) = addParam n >> return n
-getArgNum (Specified (Named _)) = namedArgError
-getArgNum ArgFromInput = do
-  n <- gets implicitArgNum
-  incrImplicitArgNum
-  return n
-
-processFormatSpec :: Name -> FormatSpec -> State FunState Exp
+processFormatSpec :: FormatBuilder m => Exp -> FormatSpec -> m Exp
 processFormatSpec toFormat spec = do
-  displayExp <- processDispl spec (VarE toFormat)
+  displayExp <- processDispl spec toFormat
   processPadding (_padding spec) displayExp
 
 
-processDispl :: FormatSpec -> Exp -> State FunState Exp
+processDispl :: FormatBuilder m => FormatSpec -> Exp -> m Exp
 processDispl spec toFormat = do
 
   let displType = _displayType spec
@@ -174,7 +125,7 @@ processDispl spec toFormat = do
   
   return $ mkApp func args
 
-processPrec :: Maybe Precision -> State FunState (Maybe Exp)
+processPrec :: FormatBuilder m => Maybe Precision -> m (Maybe Exp)
 processPrec Nothing = return Nothing
 processPrec (Just PrecFromInput) = undefined
 processPrec (Just (Prec (Fixed n))) = return $ Just (mkLitIntE n)
@@ -183,61 +134,15 @@ processPrec (Just (Prec (Variable (Parameter arg)))) = Just <$> processArgument 
 
 
 
-processPadding :: Padding -> Exp -> State FunState Exp
+processPadding :: FormatBuilder m => Padding -> Exp -> m Exp
 processPadding (Padding _ (Width (Fixed 0)) _) toPad = return toPad
 processPadding (Padding (Fill fill) width align) toPad = do
   w <- processWidth width
   return $ mkApp addPaddingE [LitE $ CharL fill, w, mkAlignE align, toPad]
 
-processWidth :: Width -> State FunState Exp
+processWidth :: FormatBuilder m => Width -> m Exp
 processWidth (Width (Fixed n)) = return $ mkLitIntE n
 processWidth (Width (Variable (Parameter arg))) = processArgument arg
 
-processArgument :: Argument -> State FunState Exp
-processArgument arg@(Named _) = namedArgError
-processArgument arg@(Numbered n) = do
-  addParam n
-  let paramName = mkParamName n
-  return $ VarE (mkName paramName)
 
 
-processFormatString :: FormatString -> State FunState Exp
-processFormatString (FormatString items) = mkConcat <$> mapM processItem items where
-  processItem :: Either String Format -> State FunState Exp
-  processItem (Left s) = return (mkStrLitE s)
-  processItem (Right format) = processFormat format
-
-  mkConcat :: [Exp] -> Exp
-  mkConcat items = foldl append' (mkStrLitE "") items
-
-  append' :: Exp -> Exp -> Exp
-  append' acc elem = UInfixE acc (mkVarE "++") elem
-
-
-
-
-
-
-
-mkFormatFunc :: FormatString -> Exp
-mkFormatFunc fs = let
-    (body, funState) = runState (processFormatString fs) initFunState
-    n = numParams funState
-    params = map (VarP . mkName . mkParamName) [0..(n-1)]
-
-  in case params of
-    [] -> body
-    (_ : _) -> LamE params body
-
-
-
-
-mkFormatStringFuncExp :: String -> Exp
-mkFormatStringFuncExp s = mkFormatFunc $ fromMaybe (error "parse error") (s =~ formatString)
-
-
-
-rustFMT :: QuasiQuoter
-rustFMT = QuasiQuoter {
-  quoteExp = pure . mkFormatStringFuncExp
-}
