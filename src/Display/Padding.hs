@@ -1,7 +1,7 @@
 module Display.Padding where
 
 
-import RustLikeFormat (Align(..))
+import Format.RustLikeFormat (Align(..))
 
 addPadding :: Char -> Int -> Align -> String -> String
 addPadding fill width align s = let

@@ -2,7 +2,7 @@
 
 module Test where
 
-import RustLikeFormatTH
+import Format.RustLikeFormatTH
 
 type TestCase = (String, String, String)
 testCases :: [TestCase]

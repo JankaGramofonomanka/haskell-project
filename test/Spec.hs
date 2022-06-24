@@ -6,4 +6,4 @@ test :: TestCase -> IO ()
 test (actual, expected, toPrint) = when (actual /= expected) $ print toPrint
 
 main :: IO ()
-main = mapM_ test testCases >> print "Finished."
+main = mapM_ test testCases >> putStrLn "Finished."
