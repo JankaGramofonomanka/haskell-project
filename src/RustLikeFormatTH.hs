@@ -42,7 +42,8 @@ import RustLikeFormat
 import Utils
 
 
-
+namedArgError :: a
+namedArgError = error "named argument doesn't make sense here"
 
 addPaddingE :: Exp
 addPaddingE = mkVarE "addPadding"
@@ -137,6 +138,7 @@ processFormat (Format arg spec) = do
 
 getArgNum :: Arg -> State FunState ArgNum
 getArgNum (Specified (Numbered n)) = addParam n >> return n
+getArgNum (Specified (Named _)) = namedArgError
 getArgNum ArgFromInput = do
   n <- gets implicitArgNum
   incrImplicitArgNum
@@ -192,6 +194,7 @@ processWidth (Width (Fixed n)) = return $ mkLitIntE n
 processWidth (Width (Variable (Parameter arg))) = processArgument arg
 
 processArgument :: Argument -> State FunState Exp
+processArgument arg@(Named _) = namedArgError
 processArgument arg@(Numbered n) = do
   addParam n
   let paramName = mkParamName n

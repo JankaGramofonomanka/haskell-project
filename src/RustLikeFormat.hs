@@ -80,12 +80,12 @@ arg :: RE Char Arg
 arg = optionDflt (Specified <$> argument)
 
 
---data Argument = Numbered Int | Named Ident deriving (Show, Eq, Ord)
---argument :: RE Char Argument
---argument = Named <$> ident <|> Numbered <$> decimal
-newtype Argument = Numbered Int deriving (Show, Eq, Ord)
+data Argument = Numbered Int | Named Ident deriving (Show, Eq, Ord)
 argument :: RE Char Argument
-argument = Numbered <$> decimal
+argument = Named <$> ident <|> Numbered <$> decimal
+--newtype Argument = Numbered Int deriving (Show, Eq, Ord)
+--argument :: RE Char Argument
+--argument = Numbered <$> decimal
 
 
 
