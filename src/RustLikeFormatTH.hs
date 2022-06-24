@@ -9,6 +9,10 @@ module RustLikeFormatTH
   , displayOct
   , displayHex
   , displayHexU
+  , displayBinP
+  , displayOctP
+  , displayHexP
+  , displayHexUP
   , DisplayPrecision(..)
   , DisplayExp(..)
   , displayExpU
@@ -66,6 +70,19 @@ displayHexE = mkDisplayExpr "Hex"
 
 displayHexUE :: Exp
 displayHexUE = mkDisplayExpr "HexU"
+
+displayBinPE :: Exp
+displayBinPE = mkDisplayExpr "BinP"
+
+displayOctPE :: Exp
+displayOctPE = mkDisplayExpr "OctP"
+
+displayHexPE :: Exp
+displayHexPE = mkDisplayExpr "HexP"
+
+displayHexUPE :: Exp
+displayHexUPE = mkDisplayExpr "HexUP"
+
 
 showE :: Exp
 showE = mkVarE "show"
@@ -127,25 +144,33 @@ getArgNum ArgFromInput = do
 
 processFormatSpec :: Name -> FormatSpec -> State FunState Exp
 processFormatSpec toFormat spec = do
-  displayExp <- processDispl (_displayType spec) (_precision spec) (VarE toFormat)
+  displayExp <- processDispl spec (VarE toFormat)
   processPadding (_padding spec) displayExp
 
 
-processDispl :: DisplayType -> Maybe Precision -> Exp -> State FunState Exp
-processDispl displType prec toFormat = do
-  mPrecE <- processPrec prec
-  return $ case displType of
-    UseDisplay -> case mPrecE of
-      Nothing -> AppE displayE toFormat
-      Just precE -> mkApp displayPrecE [precE, toFormat]
+processDispl :: FormatSpec -> Exp -> State FunState Exp
+processDispl spec toFormat = do
 
-    UseShow       -> AppE showE         toFormat
-    UseOctal      -> AppE displayOctE   toFormat
-    UseHex Lower  -> AppE displayHexE   toFormat
-    UseHex Upper  -> AppE displayHexUE  toFormat
-    UseBinary     -> AppE displayBinE   toFormat
-    UseExp Lower  -> AppE displayExpE   toFormat
-    UseExp Upper  -> AppE displayExpUE  toFormat
+  let displType = _displayType spec
+  let prec = _precision spec
+  let hash = _hash spec
+
+  mPrecE <- processPrec prec
+  
+  (func, args) <- pure $ case displType of
+    UseDisplay -> case mPrecE of
+      Nothing -> (displayE, [toFormat])
+      Just precE -> (displayPrecE, [precE, toFormat])
+
+    UseShow       -> (showE,                                          [toFormat])
+    UseOctal      -> (if hash then displayOctPE   else displayOctE,   [toFormat])
+    UseHex Lower  -> (if hash then displayHexPE   else displayHexE,   [toFormat])
+    UseHex Upper  -> (if hash then displayHexUPE  else displayHexUE,  [toFormat])
+    UseBinary     -> (if hash then displayBinPE   else displayBinE,   [toFormat])
+    UseExp Lower  -> (displayExpE,                                    [toFormat])
+    UseExp Upper  -> (displayExpUE,                                   [toFormat])
+  
+  return $ mkApp func args
 
 processPrec :: Maybe Precision -> State FunState (Maybe Exp)
 processPrec Nothing = return Nothing

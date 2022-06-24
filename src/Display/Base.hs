@@ -35,3 +35,9 @@ displayBin = displayBase 2
 displayOct = displayBase 8
 displayHex = displayBase 16
 displayHexU = map toUpper . displayHex
+
+displayBinP, displayOctP, displayHexP, displayHexUP :: DisplayBase a => a -> String
+displayBinP = ("0b" ++) . displayBin
+displayOctP = ("0o" ++) . displayOct
+displayHexP = ("0x" ++) . displayHex
+displayHexUP = ("0x" ++) . displayHexU
