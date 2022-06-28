@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module PyFShowcase where
+module PyFDemo where
 
 
 import PyF
