@@ -17,8 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver:
-  url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/28.yaml
+resolver: nightly-2022-06-28
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -41,6 +40,9 @@ packages:
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 #
 # extra-deps: []
+extra-deps:
+- singletons-base-3.1@sha256:c7c83b0da1ad6f02129d900ca8feaf6ae463a73b1935bdc199cfbacf14db31a1,7073
+- singletons-th-3.1@sha256:5f7b1374c0f30f470a24811872cce210011f8402ce5130b6ef55098523f8dc3f,4605
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

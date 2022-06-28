@@ -27,6 +27,12 @@ dependencies:
 - containers
 - mtl
 
+- PyF
+- singletons >= 3.0
+- singletons-base >= 3.0
+- singletons-th >= 3.0
+- text
+
 library:
   source-dirs: src
 
