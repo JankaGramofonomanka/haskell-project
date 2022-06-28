@@ -179,7 +179,7 @@ fill = Fill <$> anySym
 
 data Align = L | M | R deriving (Show, Eq, Ord)
 instance Default Align where
-  dflt = R
+  dflt = L
 
 align :: RE Char Align
 align = L <$ sym '<' <|> M <$ sym '^' <|> R <$ sym '>'

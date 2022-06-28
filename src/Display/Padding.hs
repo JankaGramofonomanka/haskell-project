@@ -13,9 +13,9 @@ addPadding fill width align s = let
     padR = leftover - padL
   
   in case align of
-    L -> pad leftover ++  s
+    L ->                  s ++ pad leftover
     M -> pad padL     ++  s ++ pad padR
-    R ->                  s ++ pad leftover
+    R -> pad leftover ++  s
     
 
 

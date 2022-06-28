@@ -11,8 +11,8 @@ import qualified Test.TestFString as F
 test :: TestCase -> IO ()
 test (actual, expected, toPrint) = when (actual /= expected) $ do 
     putStrLn ("| " ++ toPrint ++ ":")
-    putStrLn ("|   expected: " ++ expected)
-    putStrLn ("|   actual:   " ++ actual)
+    putStrLn ("|   expected: " ++ show expected)
+    putStrLn ("|   actual:   " ++ show actual)
     
 
 

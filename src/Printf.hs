@@ -6,6 +6,7 @@
   , TypeApplications
   , ScopedTypeVariables
   , TypeFamilies
+  , TypeOperators
 
   , TemplateHaskell
   , StandaloneDeriving
